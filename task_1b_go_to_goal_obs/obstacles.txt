@@ -1,0 +1,3 @@
+1, d, north | 1, e, south
+2, d, north | 3, e, south
+3, d, north | 3, e, south

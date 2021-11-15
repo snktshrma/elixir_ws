@@ -1,0 +1,5 @@
+5, e, west
+5, e, south
+5, d, south
+5, c, south
+5, b, south
