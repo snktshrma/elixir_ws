@@ -72,7 +72,8 @@ defmodule ToyRobot do
     y = @vals_y[robot.y]
     f = @vals_facing[robot.facing]
     cond do
-      y == 1 -> f - 1
+      y == 1 and f == 4 -> -1
+      y == 1 and f == 2-> 1
       x == 1 -> f - 2
       y == 5 -> f - 3
       x == 5 and f == 1 -> 1
