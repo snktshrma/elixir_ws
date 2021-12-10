@@ -90,7 +90,6 @@ defmodule Task2PhoenixServerWeb.ArenaLive do
     socket = assign(socket, :img, facing_bot)
     socket = assign(socket, :bottom, data["bottom"])
     socket = assign(socket, :left, data["left"])
-    :timer.sleep(2000)
     ###########################
     ## complete this funcion ##
     ###########################

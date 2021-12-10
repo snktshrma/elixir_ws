@@ -1,0 +1,7 @@
+/.forever.step
+/_build/
+/deps/
+/doc/
+/tags
+/bench/snapshots/
+.elixir_ls

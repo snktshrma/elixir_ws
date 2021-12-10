@@ -77,10 +77,14 @@ defmodule ToyRobot do
     cond do
       y == 1 and f == 4 -> -1
       y == 1 and f == 2-> 1
+      y == 1 and f == 1-> 0
+      y == 1 and f == 3-> 2
       x == 1 -> f - 2
       y == 5 -> f - 3
       x == 5 and f == 1 -> 1
       x == 5 and f == 3 -> -1
+      x == 5 and f == 2 -> 2
+      x == 5 and f == 4 -> 0
       true -> -1
     end
   end
