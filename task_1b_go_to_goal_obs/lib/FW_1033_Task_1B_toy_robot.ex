@@ -192,7 +192,7 @@ def for_check(n,robot,t,erro,er,goal_x,goal_y) when n == 1 do
   end
 
 
-  def avoid(robot,goal_x,goal_y,flag \\ -1) do
+  def avoid(robot,goal_x,goal_y,test \\ 0,flag \\ -1) do
     flg = 1
     {robot, flag} = cond do
                       retest(robot) == 1 -> 
@@ -210,11 +210,11 @@ def for_check(n,robot,t,erro,er,goal_x,goal_y) when n == 1 do
     check_x = robot.x
     check_y = robot.y
     if ttr do
-      avoid(robot,goal_x,goal_y,flag)
+      avoid(robot,goal_x,goal_y,test+1,flag)
     else
       robot = move(robot)
       cond do
-        @vals_y[goal_y] == @vals_y[check_y] or goal_x == check_x or flg == 1 -> 
+        test != 0 -> 
           flg = 1
           ttr = mpid(robot)
           robot = if flag == -1 do
@@ -224,15 +224,10 @@ def for_check(n,robot,t,erro,er,goal_x,goal_y) when n == 1 do
                   end
           ttr = mpid(robot)
           if ttr do
-            stop(robot,goal_x,goal_y,:cli_robot_state)
+            avoid(robot,goal_x,goal_y,test+1,flag)
           else
              robot = move(robot)
-             ttr = mpid(robot)
-             robot = if flag == -1 do
-                    left(robot)
-                  else
-                    right(robot)
-                  end
+
              stop(robot,goal_x,goal_y,:cli_robot_state)
           end
           
@@ -287,7 +282,6 @@ def for_check(n,robot,t,erro,er,goal_x,goal_y) when n == 1 do
               true -> con_check(err,robot,error_y*(-1),error_x,goal_x,goal_y)
             end
 
-          error_y == 0 -> for_loop(error_y, robot, error_x,goal_x,goal_y)
         end
       else
         cond do
@@ -328,7 +322,6 @@ def for_check(n,robot,t,erro,er,goal_x,goal_y) when n == 1 do
               true -> con_check(err,robot,error_x*(-1),error_y,goal_x,goal_y)
             end
 
-          error_x == 0 -> for_loop(error_x, robot, error_y,goal_x,goal_y)
         end
       end
     end

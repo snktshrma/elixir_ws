@@ -208,36 +208,7 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
     end
   end
 
-  def rec(pid) do
-    parent = self()
-    if Process.alive? pid do
-      rec(pid)
-    else
-      receive do
-        {:ok,x} -> x
-      end
-    end
-  end
 
-  def recB(robot) do
-    parent = self()
-    pidB = spawn_link(fn -> x = send_B(robot, :rec_A); send(parent, {:ok, x}) end)
-    Process.register(pidB, :rec_B)
-    rec(pidB)
-  end
-
-  def send_B(%CLI.Position{x: x, y: y, facing: facing} = _robot, :cli_robot_state) do
-    send(:positionB, {x, y, facing})
-    # IO.puts("Sent by Toy Robot Client: #{x}, #{y}, #{facing}")
-    listen_from_A()
-  end
-
-  def listen_from_A() do
-    receive do
-      {:positionA, {x, y, facing}} ->
-        {x, y, facing}
-    end
-  end
 
 
   def avoid(robot,goal_locs,flag \\ -1) do
@@ -299,6 +270,108 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
 
 
 
+    def fort(list,n,start,last,fin, ind) when ind == n-1 do
+    x = Enum.at(list,ind)
+    x = List.insert_at(x,0,start)
+    nx = length(x)
+    last = forx(x,nx,last,fin)
+    IO.inspect Enum.at(list,Enum.find_index(last, fn x -> x == Enum.min(last) end))
+    IO.inspect last
+    Enum.at(list,Enum.find_index(last, fn x -> x == Enum.min(last) end))
+  end
+
+  def fory(x,nx,inx,last,fin,ind) when ind == nx-1 do
+    fin = List.insert_at(fin,-1,subt(Enum.at(x,inx),Enum.at(x,ind)))
+  end
+
+
+
+
+  def fort(list,n,start,last \\ [],fin \\ [],ind \\ 0) do
+    x = Enum.at(list,ind)
+    x = List.insert_at(x,0,start)
+    nx = length(x)
+    last = forx(x,nx,last,fin)
+
+    fort(list,n,start,last,fin,ind+1)
+  end
+
+  def forx(x,nx,last,fin,ind \\ 0) do
+
+    fin = fory(x,nx,ind,last,fin)
+
+    List.insert_at(last,-1,Enum.sum(fin))
+  end
+
+  def fory(x,nx,inx,last,fin,ind \\ 0) do
+
+    fin = List.insert_at(fin,-1,subt(Enum.at(x,inx),Enum.at(x,ind)))
+    inx = ind
+    fory(x,nx,inx,last,fin,ind+1)
+  end
+
+
+  def check(x,y) do
+    x = if is_integer(x) do
+          x
+        else
+          String.to_integer(x)
+        end
+
+    y = if is_atom(y) do
+          y
+        else
+          String.to_atom(y)
+        end
+
+        [x,y]
+  end
+
+
+
+
+  def subt(a,b) do
+
+    new = []
+    x1 = Enum.at(a,0)
+    x2 = Enum.at(b,0)
+    y1 = Enum.at(a,1)
+    y2 = Enum.at(b,1)
+    [x1,y1] = check(x1,y1)
+    [x2,y2] = check(x2,y2)
+    y1 = @vals_y[y1]
+    y2 = @vals_y[y2]
+    x = abs(x1-x2)
+    y = abs(y1-y2)
+    new = List.insert_at(new,-1,x)
+    new = List.insert_at(new,-1,y)
+    Enum.sum(new)
+
+  end
+
+  
+
+  def of([]) do
+    [[]]
+  end
+
+  def of(list) do
+    for h <- list, t <- of(list -- [h]), do: [h | t]
+  end
+
+
+
+  def arrange(start,list) do
+    list = of(list)
+    n = length(list)
+
+    fort(list,n,start)
+
+  end
+
+
+
+
 
   def val_ext(list) do
     num = List.last(list)
@@ -320,13 +393,59 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
 
 
 
+  def rec(pid) do
+    parent = self()
+    if Process.alive? pid do
+      rec(pid)
+    else
+      receive do
+        {:ok,x} -> x
+      end
+    end
+  end
+
+  def recB(robot, n \\ 0) do
+    x = if n == 0 do
+          parent = self()
+          pidB = spawn_link(fn -> x = send_B(robot, :rec_A); send(parent, {:ok, x}) end)
+          Process.register(pidB, :rec_B)
+          rec(pidB)
+        else
+          parent = self()
+          pidB = spawn_link(fn -> x = listen_from_A(robot); send(parent, {:ok, x}) end)
+          Process.register(pidB, :rec_B)
+          rec(pidB)
+        end
+  end
+
+  def send_B(robot, :cli_robot_state) do
+    send(:rec_A, {:positionB,robot.x, robot.y, robot.facing})
+    # IO.puts("Sent by Toy Robot Client: #{x}, #{y}, #{facing}")
+    listen_from_A(robot)
+  end
+
+  def listen_from_A(robot) do
+    receive do
+      {:positionA, x, y, facing} ->
+        {:positionA, x, y, facing}
+
+      {:ok,x} -> x
+      # send(:rec_A, {:positionB,robot.x, robot.y, robot.facing})
+      x
+    end
+  end
+
+
 
   def stop(robot, goal_locs, cli_proc_name) do
     goal_locs = if is_integer(List.last(goal_locs)) do 
       goal_locs
     else 
-      [[3,:a],[5,:d],[2,:c],0]
+      goal_locs = arrange([robot.x,robot.y], goal_locs)
+      goal_locs = recB(robot,1)
+      goal_locs = List.insert_at(goal_locs,-1,0)
     end
+
     [x,y] = val_ext(goal_locs)
 
     goal_y = y
