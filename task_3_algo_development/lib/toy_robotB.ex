@@ -147,8 +147,8 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
 
   def for_loop(n,robot,er,goal_locs) when n == 1 and er == 0 do
     [goal_x,goal_y] = val_ext(goal_locs)
+    recB(robot)
     robot = move(robot)
-    ttr = mpid(robot)
     len = length(goal_locs)
     num = List.last(goal_locs)
     if len-2 > num do
@@ -157,6 +157,7 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
       new = new ++ [num]
       stop(robot,new,:cli_robot_state)
     else
+      ttr = mpid(robot)
       {:ok, %CLI.Position{x: robot.x, y: robot.y, facing: robot.facing}}
     end
   end 
@@ -165,6 +166,7 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
   def for_loop(n,robot,er,goal_locs) when n <= 1 do
     [goal_x,goal_y] = val_ext(goal_locs)
     robot = if n == 1 do
+              recB(robot)
               robot = move(robot)
               robot
             else
@@ -179,6 +181,7 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
 
   def for_loop(n,robot,er,goal_locs) do
     [goal_x,goal_y] = val_ext(goal_locs)
+    recB(robot)
     robot = move(robot)
     ttr = mpid(robot)
     if ttr do
@@ -230,8 +233,9 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
     check_x = robot.x
     check_y = robot.y
     if ttr do
-      avoid(robot,goal_x,goal_y,test+1,flag)
+      avoid(robot,goal_locs,test+1,flag)
     else
+      recB(robot)
       robot = move(robot)
       cond do
         test != 0 -> 
@@ -244,14 +248,15 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
                   end
           ttr = mpid(robot)
           if ttr do
-            avoid(robot,goal_x,goal_y,test+1,flag)
+            avoid(robot,goal_locs,test+1,flag)
           else
+             recB(robot)
              robot = move(robot)
 
-             stop(robot,goal_x,goal_y,:cli_robot_state)
+             stop(robot,goal_x,goal_y,:client_toyrobotB)
           end
           
-        true -> stop(robot,goal_x,goal_y,:cli_robot_state)
+        true -> stop(robot,goal_x,goal_y,:client_toyrobotB)
       end
     end
   end
@@ -310,33 +315,36 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
   end
 
   def recB(robot, n \\ 0) do
-    x = if n == 0 do
+    x = cond do
+      n == 0 ->
           parent = self()
           pidB = spawn_link(fn -> x = send_B(robot, :rec_A); send(parent, {:ok, x}) end)
           Process.register(pidB, :rec_B)
           rec(pidB)
-        else
+      n == 1 ->
           parent = self()
-          pidB = spawn_link(fn -> x = listen_from_A(robot); send(parent, {:ok, x}) end)
+          pidB = spawn_link(fn -> x = listen_from_A(); send(parent, {:ok, x}) end)
           Process.register(pidB, :rec_B)
           rec(pidB)
+      n == 2 ->
+          parent = self()
+          a = [robot.x, robot.y, robot.facing]
+          pidB = spawn_link(fn -> x = Process.send_after(:rec_A, {:ok, a},10) end)
         end
   end
 
-  def send_B(robot, :cli_robot_state) do
-    send(:rec_A, {:positionB,robot.x, robot.y, robot.facing})
+  def send_B(robot, cli_robot_state) do
+    Process.send_after(:rec_A, {:positionB,robot, move(robot)},10)
     # IO.puts("Sent by Toy Robot Client: #{x}, #{y}, #{facing}")
-    listen_from_A(robot)
+    listen_from_A()
   end
 
-  def listen_from_A(robot) do
+  def listen_from_A() do
     receive do
-      {:positionA, x, y, facing} ->
-        {:positionA, x, y, facing}
+      {:positionA, robot, move_robot} ->
+        {:positionA, robot, move_robot}
 
       {:ok,x} -> x
-      # send(:rec_A, {:positionB,robot.x, robot.y, robot.facing})
-      x
     end
   end
 
@@ -346,6 +354,7 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
     goal_locs = if is_integer(List.last(goal_locs)) do 
       goal_locs
     else 
+      recB(robot,2)
       goal_locs = recB(robot,1)
       goal_locs = List.insert_at(goal_locs,-1,0)
     end

@@ -97,8 +97,8 @@ defmodule Testing do
 
 
 	def arrange() do
-		start = [1,:a,:north]
-		list = of([[1,:c],[4,:c],[3,:b],[3,:e]])
+		start = [3,:e,:south]
+		list = of([[3,:d]])
 		n = length(list)
 
 		aa = Enum.at(fort(list,n,start,"a"),1)
@@ -106,7 +106,7 @@ defmodule Testing do
 		bb = Enum.at(fort(list,n,[5,:e,:south],"b"),1)
 
 		st = aa ++ bb
-		main(st,length(aa))
+		main(start,[5,:e,:south],st,length(aa))
 	end
 
 
@@ -122,7 +122,7 @@ defmodule Testing do
 
 
 
-	def main(list,k,fii,mn,ind, rep) when ind == length(list) - 1 do
+	def main(startA,startB,list,k,fii,mn,ind, rep) when ind == length(list) - 1 do
 
 		x = Enum.at(list,ind)
 		eA = for a <- x, Enum.at(a,2) == "a", do: List.delete_at(a,2)
@@ -133,27 +133,27 @@ defmodule Testing do
 		listA = of(eA)
 		listB = of(eB)
 
-		aa = fort(listA,length(listA),[1,:a,:north],"a")
-		bb = fort(listB,length(listB),[5,:e,:south],"b")
+		aa = fort(listA,length(listA),startA,"a")
+		bb = fort(listB,length(listB),startB,"b")
 		sumAB = Enum.at(aa,0) + Enum.at(bb,0)
 		last = List.insert_at(mn,-1,sumAB)
 		fii = List.insert_at(fii,-1,Enum.at(aa,1) ++ Enum.at(bb,1))
-		IO.inspect last
-		IO.inspect fii
 		Enum.at(fii,Enum.find_index(last, fn x -> x == Enum.min(last) end))
 
 	end
 
 
 
-	def main(list,k,fii \\ [], mn \\ [],ind \\ 0, rep \\ 0) do
+	def main(startA,startB,list,k,fii \\ [], mn \\ [],ind \\ 0, rep \\ 0) do
 		if rep == 0 do
+			IO.puts "----------------"
+			IO.inspect rep
+			IO.puts "_____________________"
 			lis = without_repetitions(list,k)
 			new = for x <- (for a <- lis, do: Enum.uniq_by(a, fn [l,m,_] -> {l,m} end)), length(x) == k, do: x
 			unique = for g <- new, do: Enum.sort(g)
 			final = Enum.uniq(unique)
-			IO.inspect final
-			main(final,k,fii,mn,ind, rep+1)
+			main(startA,startB,final,k,fii,mn,ind, rep+1)
 
 		else
 			x = Enum.at(list,ind)
@@ -162,9 +162,9 @@ defmodule Testing do
 			listA = of(eA)
 			listB = of(eB)
 			
-			aa = fort(listA,length(listA),[1,:a,:north],"a")
+			aa = fort(listA,length(listA),startA,"a")
 
-			bb = fort(listB,length(listB),[5,:e,:south],"b")
+			bb = fort(listB,length(listB),startB,"b")
 
 			sumAB = Enum.at(aa,0) + Enum.at(bb,0)
 
@@ -172,7 +172,7 @@ defmodule Testing do
 			fii = List.insert_at(fii,-1,Enum.at(aa,1) ++ Enum.at(bb,1))
 
 			sumAB
-			main(list,k,fii,mn,ind+1,rep)
+			main(startA,startB,list,k,fii,mn,ind+1,rep)
 
 		end
 	end

@@ -148,8 +148,8 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
 
   def for_loop(n,robot,er,goal_locs) when n == 1 and er == 0 do
     [goal_x,goal_y] = val_ext(goal_locs)
+    recA(robot)
     robot = move(robot)
-    ttr = mpid(robot)
     len = length(goal_locs)
     num = List.last(goal_locs)
     if len-2 > num do
@@ -158,6 +158,7 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
       new = new ++ [num]
       stop(robot,new,:cli_robot_state)
     else
+      ttr = mpid(robot)
       {:ok, %CLI.Position{x: robot.x, y: robot.y, facing: robot.facing}}
     end
   end 
@@ -166,6 +167,7 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
   def for_loop(n,robot,er,goal_locs) when n <= 1 do
     [goal_x,goal_y] = val_ext(goal_locs)
     robot = if n == 1 do
+              recA(robot)
               robot = move(robot)
               robot
             else
@@ -181,6 +183,7 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
 
   def for_loop(n,robot,er,goal_locs) do
     [goal_x,goal_y] = val_ext(goal_locs)
+    recA(robot)
     robot = move(robot)
     ttr = mpid(robot)
     if ttr do
@@ -197,7 +200,10 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
     parent = self()
     pid = spawn_link(fn -> x = send_robot_status(robot, :cli_robot_state); send(parent, {:ok, x}) end)
     Process.register(pid, :client_toyrobotA)
+
+    # robo_pre = recA(robot)
     del(pid)
+
   end
 
   def del(pid) do
@@ -232,8 +238,9 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
     check_x = robot.x
     check_y = robot.y
     if ttr do
-      avoid(robot,goal_x,goal_y,test+1,flag)
+      avoid(robot,goal_locs,test+1,flag)
     else
+      recA(robot)
       robot = move(robot)
       cond do
         test != 0 -> 
@@ -246,14 +253,15 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
                   end
           ttr = mpid(robot)
           if ttr do
-            avoid(robot,goal_x,goal_y,test+1,flag)
+            avoid(robot,goal_locs,test+1,flag)
           else
+             recA(robot)
              robot = move(robot)
 
-             stop(robot,goal_x,goal_y,:cli_robot_state)
+             stop(robot,goal_locs,:cli_robot_state)
           end
           
-        true -> stop(robot,goal_x,goal_y,:cli_robot_state)
+        true -> stop(robot,goal_locs,:cli_robot_state)
       end
     end
   end
@@ -403,7 +411,7 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
     bb = Enum.at(fort(list,n,startB,"b"),1)
 
     st = aa ++ bb
-    main(st,length(aa))
+    main(startA,startB,st,length(aa))
   end
 
 
@@ -419,7 +427,7 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
 
 
 
-  def main(list,k,fii,mn,ind, rep) when ind == length(list) - 1 do
+  def main(startA,startB,list,k,fii,mn,ind, rep) when ind == length(list) - 1 do
 
     x = Enum.at(list,ind)
     eA = for a <- x, Enum.at(a,2) == "a", do: List.delete_at(a,2)
@@ -430,8 +438,8 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
     listA = of(eA)
     listB = of(eB)
 
-    aa = fort(listA,length(listA),[1,:a,:north],"a")
-    bb = fort(listB,length(listB),[5,:e,:south],"b")
+    aa = fort(listA,length(listA),startA,"a")
+    bb = fort(listB,length(listB),startB,"b")
     sumAB = Enum.at(aa,0) + Enum.at(bb,0)
     last = List.insert_at(mn,-1,sumAB)
     fii = List.insert_at(fii,-1,Enum.at(aa,1) ++ Enum.at(bb,1))
@@ -441,13 +449,13 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
 
 
 
-  def main(list,k,fii \\ [], mn \\ [],ind \\ 0, rep \\ 0) do
+  def main(startA,startB,list,k,fii \\ [], mn \\ [],ind \\ 0, rep \\ 0) do
     if rep == 0 do
       lis = without_repetitions(list,k)
       new = for x <- (for a <- lis, do: Enum.uniq_by(a, fn [l,m,_] -> {l,m} end)), length(x) == k, do: x
       unique = for g <- new, do: Enum.sort(g)
       final = Enum.uniq(unique)
-      main(final,k,fii,mn,ind, rep+1)
+      main(startA,startB,final,k,fii,mn,ind, rep+1)
 
     else
       x = Enum.at(list,ind)
@@ -456,9 +464,9 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
       listA = of(eA)
       listB = of(eB)
       
-      aa = fort(listA,length(listA),[1,:a,:north],"a")
+      aa = fort(listA,length(listA),startA,"a")
 
-      bb = fort(listB,length(listB),[5,:e,:south],"b")
+      bb = fort(listB,length(listB),startB,"b")
 
       sumAB = Enum.at(aa,0) + Enum.at(bb,0)
 
@@ -466,7 +474,7 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
       fii = List.insert_at(fii,-1,Enum.at(aa,1) ++ Enum.at(bb,1))
 
       sumAB
-      main(list,k,fii,mn,ind+1,rep)
+      main(startA,startB,list,k,fii,mn,ind+1,rep)
 
     end
   end
@@ -597,28 +605,44 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
 
 
   def recA(robot,a \\ [], n \\ 0) do
-    x = if n == 0 do
+    x = cond do 
+      n == 0 ->
           parent = self()
-          pidA = spawn_link(fn -> x = send_B(robot, :rec_B); send(parent, {:ok, x}) end)
+          pidA = spawn_link(fn -> x = listen_send(robot); send(parent, {:ok, x}) end)
           Process.register(pidA, :rec_A)
           rec(pidA)
-        else
+      n == 1 ->
+          parent = self()
+          pidA = spawn_link(fn -> x = listen_from_B(); send(parent, {:ok, x}) end)
+          Process.register(pidA, :rec_A)
+          rec(pidA)
+      n = 2 ->
           parent = self()
           pidA = spawn_link(fn -> x = Process.send_after(:rec_B, {:ok, a},10) end)
-          Process.register(pidA, :rec_A)
+
         end
   end
 
-  def send_B(%CLI.Position{x: x, y: y, facing: facing} = _robot, cli_proc_name) do
-    Process.send_after(:rec_B, {:positionA,x, y, facing},10)
+  def send_B(%CLI.Position{x: x, y: y, facing: facing} = robot, cli_proc_name) do
+    Process.send_after(:rec_B, {:positionA, robot, move(robot)},10)
     # IO.puts("Sent by Toy Robot Client: #{x}, #{y}, #{facing}")
     listen_from_B()
   end
 
+  def listen_send(robot) do
+    receive do
+      {:positionB, robot, move_robot} ->
+        {:positionB, robot, move_robot}
+        Process.send_after(:rec_B, {:positionA,robot, move(robot)},10)
+    end
+  end
+
   def listen_from_B() do
     receive do
-      {:positionB,x, y, facing} ->
-        {:positionB,x, y, facing}
+      {:positionB,robot, move_robot} ->
+        {:positionB,robot, move_robot}
+
+      {:ok,x} -> x
 
     end
   end
@@ -631,11 +655,11 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
     goal_locs = if is_integer(List.last(goal_locs)) do 
       goal_locs
     else 
-      startB = [3,:a,:north]
+      startB = recA(robot,[],1)
       goal_locs = arrange([robot.x,robot.y,robot.facing],startB,goal_locs)
       goal_b = for x <- goal_locs, Enum.at(x,-1) == "b", do: List.delete_at(x,-1)
       goal_locs = for x <- goal_locs, Enum.at(x,-1) == "a", do: List.delete_at(x,-1)
-      recA(robot,goal_b,1)
+      recA(robot,goal_b,2)
       goal_locs = List.insert_at(goal_locs,-1,0)
     end
 
