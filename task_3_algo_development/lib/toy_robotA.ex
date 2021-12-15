@@ -211,9 +211,9 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
     end
   end
 
-  
 
-  def avoid(robot,goal_locs,flag \\ -1) do
+  
+  def avoid(robot,goal_locs,test \\ 0,flag \\ -1) do
     [goal_x,goal_y] = val_ext(goal_locs)
     flg = 1
     {robot, flag} = cond do
@@ -232,11 +232,11 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
     check_x = robot.x
     check_y = robot.y
     if ttr do
-      avoid(robot,goal_locs,flag)
+      avoid(robot,goal_x,goal_y,test+1,flag)
     else
       robot = move(robot)
       cond do
-        @vals_y[goal_y] == @vals_y[check_y] or goal_x == check_x or flg == 1 -> 
+        test != 0 -> 
           flg = 1
           ttr = mpid(robot)
           robot = if flag == -1 do
@@ -246,74 +246,16 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
                   end
           ttr = mpid(robot)
           if ttr do
-            
-
-            
-          stop(robot,goal_locs,:cli_robot_state)
+            avoid(robot,goal_x,goal_y,test+1,flag)
           else
              robot = move(robot)
-             ttr = mpid(robot)
-             robot = if flag == -1 do
-                    left(robot)
-                  else
-                    right(robot)
-                  end
-             
 
-             
-          stop(robot,goal_locs,:cli_robot_state)
+             stop(robot,goal_x,goal_y,:cli_robot_state)
           end
           
-        true -> 
-
-          
-          stop(robot,goal_locs,:cli_robot_state)
+        true -> stop(robot,goal_x,goal_y,:cli_robot_state)
       end
     end
-  end
-
-
-
-
-
-
-  def fort(list,n,start,last,fin, ind) when ind == n-1 do
-    x = Enum.at(list,ind)
-    x = List.insert_at(x,0,start)
-    nx = length(x)
-    last = forx(x,nx,last,fin)
-    IO.inspect Enum.at(list,Enum.find_index(last, fn x -> x == Enum.min(last) end))
-    IO.inspect last
-    Enum.at(list,Enum.find_index(last, fn x -> x == Enum.min(last) end))
-  end
-
-  def fory(x,nx,inx,last,fin,ind) when ind == nx-1 do
-    fin = List.insert_at(fin,-1,subt(Enum.at(x,inx),Enum.at(x,ind)))
-  end
-
-
-
-
-  def fort(list,n,start,last \\ [],fin \\ [],ind \\ 0) do
-    x = Enum.at(list,ind)
-    x = List.insert_at(x,0,start)
-    nx = length(x)
-    last = forx(x,nx,last,fin)
-    fort(list,n,start,last,fin,ind+1)
-  end
-
-  def forx(x,nx,last,fin,ind \\ 0) do
-
-    fin = fory(x,nx,ind,last,fin)
-
-    List.insert_at(last,-1,Enum.sum(fin))
-  end
-
-  def fory(x,nx,inx,last,fin,ind \\ 0) do
-
-    fin = List.insert_at(fin,-1,subt(Enum.at(x,inx),Enum.at(x,ind)))
-    inx = ind
-    fory(x,nx,inx,last,fin,ind+1)
   end
 
 
@@ -335,6 +277,89 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
 
 
 
+  def val_ext(list) do
+    num = List.last(list)
+    new = Enum.at(list,num)
+    [a,b] = new
+    x = if is_integer(a) do
+          a
+        else
+          String.to_integer(a)
+        end
+
+    y = if is_atom(b) do
+          b
+        else
+          String.to_atom(b)
+        end
+    [x,y]
+  end 
+
+
+
+  def fort(list,n,start,bot,last,fin, ind) when ind == n-1 do
+    x = Enum.at(list,ind)
+    x = List.insert_at(x,0,[Enum.at(start,0),Enum.at(start,1)])
+    nx = length(x)
+    last = forx(x,nx,last,fin,Enum.at(start,2))
+    list = for a <- list, do: for b <- a, do: List.insert_at(b,-1,bot)
+    [Enum.min(last), Enum.at(list,Enum.find_index(last, fn x -> x == Enum.min(last) end))]
+  end
+
+  def fory(x,nx,inx,last,fin,face,ind) when ind == nx-1 do
+    fin = List.insert_at(fin,-1,subt(Enum.at(x,inx),Enum.at(x,ind)))
+    facing = face_error(Enum.at(Enum.at(x,inx),0), Enum.at(Enum.at(x,inx),1), Enum.at(Enum.at(x,ind),0), Enum.at(Enum.at(x,ind),1), face)
+    sum = abs(Enum.at(facing,0)) + abs(Enum.at(facing,1))
+    fin = List.insert_at(fin,-1,sum)
+    
+  end
+
+
+
+
+  def fort(list,n,start,bot,last \\ [],fin \\ [],ind \\ 0) do
+    x = Enum.at(list,ind)
+    x = List.insert_at(x,0,[Enum.at(start,0),Enum.at(start,1)])
+    nx = length(x)
+    last = forx(x,nx,last,fin,Enum.at(start,2))
+
+    fort(list,n,start,bot,last,fin,ind+1)
+  end
+
+  def forx(x,nx,last,fin,face,ind \\ 0) do
+
+
+    fin = fory(x,nx,ind,last,fin,face)
+
+    List.insert_at(last,-1,Enum.sum(fin))
+  end
+
+  def fory(x,nx,inx,last,fin,face,ind \\ 0) do
+
+    fin = List.insert_at(fin,-1,subt(Enum.at(x,inx),Enum.at(x,ind)))
+    facing = face_error(Enum.at(Enum.at(x,inx),0), Enum.at(Enum.at(x,inx),1), Enum.at(Enum.at(x,ind),0), Enum.at(Enum.at(x,ind),1), face)
+    sum = abs(Enum.at(facing,0)) + abs(Enum.at(facing,1))
+    fin = List.insert_at(fin,-1,sum)
+    inx = ind
+
+    sum2 = -Enum.at(facing,0) - Enum.at(facing,1)
+    facen = @vals_facing[face] + sum2
+
+    facen  = cond do
+
+          facen > 4 -> facen - 4
+          facen < 1 -> facen + 4
+          true -> facen
+         end
+
+    face = cond do
+          facen == 1 -> :north
+          facen == 2 -> :east
+          facen == 3 -> :south
+          facen == 4 -> :west
+         end
+    fory(x,nx,inx,last,fin,face,ind+1)
+  end
 
   def subt(a,b) do
 
@@ -367,37 +392,194 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
 
 
 
-  def arrange(start,list) do
-    list = of(list)
+  def arrange(startA,startB,goal_locs) do
+    startA = startA
+    startB = startB
+    list = of(goal_locs)
     n = length(list)
 
-    fort(list,n,start)
+    aa = Enum.at(fort(list,n,startA,"a"),1)
+
+    bb = Enum.at(fort(list,n,startB,"b"),1)
+
+    st = aa ++ bb
+    main(st,length(aa))
+  end
+
+
+  def without_repetitions([], _k), do: [[]]
+
+
+  def without_repetitions(_list, 0), do: [[]]
+
+
+  def without_repetitions(list, k) do
+      for head <- list, tail <- without_repetitions(list -- [head], k - 1), do: [head | tail]
+  end
+
+
+
+  def main(list,k,fii,mn,ind, rep) when ind == length(list) - 1 do
+
+    x = Enum.at(list,ind)
+    eA = for a <- x, Enum.at(a,2) == "a", do: List.delete_at(a,2)
+    eB = for a <- x, Enum.at(a,2) == "b", do: List.delete_at(a,2)
+
+
+
+    listA = of(eA)
+    listB = of(eB)
+
+    aa = fort(listA,length(listA),[1,:a,:north],"a")
+    bb = fort(listB,length(listB),[5,:e,:south],"b")
+    sumAB = Enum.at(aa,0) + Enum.at(bb,0)
+    last = List.insert_at(mn,-1,sumAB)
+    fii = List.insert_at(fii,-1,Enum.at(aa,1) ++ Enum.at(bb,1))
+    Enum.at(fii,Enum.find_index(last, fn x -> x == Enum.min(last) end))
 
   end
 
 
 
+  def main(list,k,fii \\ [], mn \\ [],ind \\ 0, rep \\ 0) do
+    if rep == 0 do
+      lis = without_repetitions(list,k)
+      new = for x <- (for a <- lis, do: Enum.uniq_by(a, fn [l,m,_] -> {l,m} end)), length(x) == k, do: x
+      unique = for g <- new, do: Enum.sort(g)
+      final = Enum.uniq(unique)
+      main(final,k,fii,mn,ind, rep+1)
+
+    else
+      x = Enum.at(list,ind)
+      eA = for a <- x, Enum.at(a,2) == "a", do: List.delete_at(a,2)
+      eB = for a <- x, Enum.at(a,2) == "b", do: List.delete_at(a,2)
+      listA = of(eA)
+      listB = of(eB)
+      
+      aa = fort(listA,length(listA),[1,:a,:north],"a")
+
+      bb = fort(listB,length(listB),[5,:e,:south],"b")
+
+      sumAB = Enum.at(aa,0) + Enum.at(bb,0)
+
+      mn = List.insert_at(mn,-1,sumAB)
+      fii = List.insert_at(fii,-1,Enum.at(aa,1) ++ Enum.at(bb,1))
+
+      sumAB
+      main(list,k,fii,mn,ind+1,rep)
+
+    end
+  end
+  
+
+  def face_error(robot_x, robot_y, x, y, robot_facing) do
+
+    goal_y = y
+    goal_x = x
+
+    [goal_x,goal_y] = check(goal_x,goal_y)
+    [robot_x,robot_y] = check(robot_x,robot_y)
+
+    error_x = goal_x - robot_x
+    error_y = @vals_y[goal_y] - @vals_y[robot_y]
 
 
+    ab = cond do 
+        error_y == 0 and error_x == 0 -> 0
+        error_y != 0 ->
+              cond do
+                error_y > 0 and @vals_facing[robot_facing] == 4 -> -1
+
+                error_y > 0 -> 
+                  err = @vals_facing[robot_facing] - 1 
+
+                  cond do
+                    err == 2 and error_x != 0 or err == -2 and error_x != 0 -> 
+                      cond do
+                        error_x < 0 and @vals_facing[robot_facing] == 1 -> 1
+
+                        error_x > 0 -> 
+                          @vals_facing[robot_facing] - 2
 
 
-  def val_ext(list) do
-    num = List.last(list)
-    new = Enum.at(list,num)
-    [a,b] = new
-    x = if is_integer(a) do
-          a
-        else
-          String.to_integer(a)
-        end
+                        error_x < 0 ->
+                          @vals_facing[robot_facing] - 4
+                      end
+                    true -> err
+                  end
 
-    y = if is_atom(b) do
-          b
-        else
-          String.to_atom(b)
-        end
-    [x,y]
-  end 
+
+                error_y < 0 ->
+                  err = @vals_facing[robot_facing] - 3
+
+                  cond do
+                    err == 2 and error_x != 0 or err == -2 and error_x != 0 -> 
+                      cond do
+                        error_x < 0 and @vals_facing[robot_facing] == 1 -> 1
+
+                        error_x > 0 -> 
+                          @vals_facing[robot_facing] - 2 
+
+                        error_x < 0 ->
+                          @vals_facing[robot_facing] - 4
+                      end
+                    true -> err
+                  end
+              end
+          true -> 0
+      end
+
+
+    ba = cond do
+        error_y == 0 and error_x == 0 -> 0
+        error_x != 0 ->
+              cond do
+                error_x < 0 and @vals_facing[robot_facing] == 1 -> 1
+
+                error_x > 0 -> 
+                  err = @vals_facing[robot_facing] - 2
+
+                  cond do
+                    err == 2 and error_y != 0 or err == -2 and error_y != 0 -> 
+                      cond do
+
+                        error_y > 0 and @vals_facing[robot_facing] == 4 -> -1
+
+                        error_y > 0 ->
+                          @vals_facing[robot_facing] - 1 
+
+                        error_y < 0 ->
+                          @vals_facing[robot_facing] - 3
+                      end
+                    true -> err
+                  end
+
+                          
+                error_x < 0 ->
+                  err = @vals_facing[robot_facing] - 4
+
+                  cond do
+                    err == 2 and error_y != 0 or err == -2 and error_y != 0 -> 
+                      cond do
+                        error_y > 0 and @vals_facing[robot_facing] == 4 -> -1
+
+                        error_y > 0 ->
+                          @vals_facing[robot_facing] - 1 
+
+                        error_y < 0 ->
+                          @vals_facing[robot_facing] - 3
+
+                      end
+                    true -> err
+                  end
+
+              end
+          true -> 0
+      end
+
+    [ab,ba] 
+  end
+
 
 
 
@@ -449,105 +631,111 @@ def for_check(n,robot,t,erro,er,goal_locs) when n == 1 do
     goal_locs = if is_integer(List.last(goal_locs)) do 
       goal_locs
     else 
-      goal_locs = arrange([robot.x,robot.y], goal_locs)
-      goal_b = recA(robot,[[3,:c]],1)
-      IO.inspect goal_b
+      startB = [3,:a,:north]
+      goal_locs = arrange([robot.x,robot.y,robot.facing],startB,goal_locs)
+      goal_b = for x <- goal_locs, Enum.at(x,-1) == "b", do: List.delete_at(x,-1)
+      goal_locs = for x <- goal_locs, Enum.at(x,-1) == "a", do: List.delete_at(x,-1)
+      recA(robot,goal_b,1)
       goal_locs = List.insert_at(goal_locs,-1,0)
     end
 
-    [x,y] = val_ext(goal_locs)
-    [x,y] = [4,:e]
-    goal_y = y
-    goal_x = x
-
-
-    error_x = goal_x - robot.x
-    error_y = @vals_y[goal_y] - @vals_y[robot.y]
-    ttr = mpid(robot)
-    if ttr do
-      avoid(robot,goal_locs)
+    if length(goal_locs) == 1 do
+      ttr = mpid(robot)
+      {:ok, %CLI.Position{x: robot.x, y: robot.y, facing: robot.facing}}
     else
-      if @vals_facing[robot.facing] == 1 and error_y != 0 or @vals_facing[robot.facing] == 3 and error_y != 0 or error_x == 0 do
-        cond do
-          error_y == 0 and error_x == 0 -> {:ok,robot}
-          error_y > 0 and @vals_facing[robot.facing] == 4 -> 
-            err = -1 
-            con_check(err,robot,error_y,error_x,goal_locs)
-          error_y > 0 -> 
-            err = @vals_facing[robot.facing] - 1 
-
-            cond do
-              err == 2 and error_x != 0 or err == -2 and error_x != 0 -> 
-                cond do
-                  error_x > 0 -> 
-                    err = @vals_facing[robot.facing] - 2
-                    con_check(err,robot,error_x, error_y,goal_locs)        
-                  error_x < 0 ->
-                    err = @vals_facing[robot.facing] - 4
-                    con_check(err,robot,error_x*(-1),error_y,goal_locs)
-                end
-              true -> con_check(err,robot,error_y,error_x,goal_locs)
-            end
+      [x,y] = val_ext(goal_locs)
+      goal_y = y
+      goal_x = x
 
 
-          error_y < 0 ->
-            err = @vals_facing[robot.facing] - 3
-
-            cond do
-              err == 2 and error_x != 0 or err == -2 and error_x != 0 -> 
-                cond do
-                  error_x > 0 -> 
-                    err = @vals_facing[robot.facing] - 2
-                    con_check(err,robot,error_x, error_y,goal_locs)        
-                  error_x < 0 ->
-                    err = @vals_facing[robot.facing] - 4
-                    con_check(err,robot,error_x*(-1),error_y,goal_locs)
-                end
-              true -> con_check(err,robot,error_y*(-1),error_x,goal_locs)
-            end
-
-          error_y == 0 -> for_loop(error_y, robot, error_x,goal_locs)
-        end
+      error_x = goal_x - robot.x
+      error_y = @vals_y[goal_y] - @vals_y[robot.y]
+      ttr = mpid(robot)
+      if ttr do
+        avoid(robot,goal_locs)
       else
-        cond do
-          error_x < 0 and @vals_facing[robot.facing] == 1 -> 
-            err = 1 
-            con_check(err,robot,error_x*(-1),error_y,goal_locs)
-          error_x > 0 -> 
-            err = @vals_facing[robot.facing] - 2
+        if @vals_facing[robot.facing] == 1 and error_y != 0 or @vals_facing[robot.facing] == 3 and error_y != 0 or error_x == 0 do
+          cond do
+            error_y == 0 and error_x == 0 -> {:ok,robot}
+            error_y > 0 and @vals_facing[robot.facing] == 4 -> 
+              err = -1 
+              con_check(err,robot,error_y,error_x,goal_locs)
+            error_y > 0 -> 
+              err = @vals_facing[robot.facing] - 1 
+
+              cond do
+                err == 2 and error_x != 0 or err == -2 and error_x != 0 -> 
+                  cond do
+                    error_x > 0 -> 
+                      err = @vals_facing[robot.facing] - 2
+                      con_check(err,robot,error_x, error_y,goal_locs)        
+                    error_x < 0 ->
+                      err = @vals_facing[robot.facing] - 4
+                      con_check(err,robot,error_x*(-1),error_y,goal_locs)
+                  end
+                true -> con_check(err,robot,error_y,error_x,goal_locs)
+              end
 
 
-            cond do
-              err == 2 and error_y != 0 or err == -2 and error_y != 0 -> 
-                cond do
-                  error_y > 0 ->
-                    err = @vals_facing[robot.facing] - 1 
-                    con_check(err,robot,error_y,error_x,goal_locs)
-                  error_y < 0 ->
-                    err = @vals_facing[robot.facing] - 3
-                    con_check(err,robot,error_y*(-1),error_x,goal_locs)
-                end
-              true -> con_check(err,robot,error_x, error_y,goal_locs)
-            end
+            error_y < 0 ->
+              err = @vals_facing[robot.facing] - 3
 
-                    
-          error_x < 0 ->
-            err = @vals_facing[robot.facing] - 4
+              cond do
+                err == 2 and error_x != 0 or err == -2 and error_x != 0 -> 
+                  cond do
+                    error_x > 0 -> 
+                      err = @vals_facing[robot.facing] - 2
+                      con_check(err,robot,error_x, error_y,goal_locs)        
+                    error_x < 0 ->
+                      err = @vals_facing[robot.facing] - 4
+                      con_check(err,robot,error_x*(-1),error_y,goal_locs)
+                  end
+                true -> con_check(err,robot,error_y*(-1),error_x,goal_locs)
+              end
 
-            cond do
-              err == 2 and error_y != 0 or err == -2 and error_y != 0 -> 
-                cond do
-                  error_y > 0 ->
-                    err = @vals_facing[robot.facing] - 1 
-                    con_check(err,robot,error_y,error_x,goal_locs)
-                  error_y < 0 ->
-                    err = @vals_facing[robot.facing] - 3
-                    con_check(err,robot,error_y*(-1),error_x,goal_locs)
-                end
-              true -> con_check(err,robot,error_x*(-1),error_y,goal_locs)
-            end
+            error_y == 0 -> for_loop(error_y, robot, error_x,goal_locs)
+          end
+        else
+          cond do
+            error_x < 0 and @vals_facing[robot.facing] == 1 -> 
+              err = 1 
+              con_check(err,robot,error_x*(-1),error_y,goal_locs)
+            error_x > 0 -> 
+              err = @vals_facing[robot.facing] - 2
 
-          error_x == 0 -> for_loop(error_x, robot, error_y,goal_locs)
+
+              cond do
+                err == 2 and error_y != 0 or err == -2 and error_y != 0 -> 
+                  cond do
+                    error_y > 0 ->
+                      err = @vals_facing[robot.facing] - 1 
+                      con_check(err,robot,error_y,error_x,goal_locs)
+                    error_y < 0 ->
+                      err = @vals_facing[robot.facing] - 3
+                      con_check(err,robot,error_y*(-1),error_x,goal_locs)
+                  end
+                true -> con_check(err,robot,error_x, error_y,goal_locs)
+              end
+
+                      
+            error_x < 0 ->
+              err = @vals_facing[robot.facing] - 4
+
+              cond do
+                err == 2 and error_y != 0 or err == -2 and error_y != 0 -> 
+                  cond do
+                    error_y > 0 ->
+                      err = @vals_facing[robot.facing] - 1 
+                      con_check(err,robot,error_y,error_x,goal_locs)
+                    error_y < 0 ->
+                      err = @vals_facing[robot.facing] - 3
+                      con_check(err,robot,error_y*(-1),error_x,goal_locs)
+                  end
+                true -> con_check(err,robot,error_x*(-1),error_y,goal_locs)
+              end
+
+            error_x == 0 -> for_loop(error_x, robot, error_y,goal_locs)
+          end
         end
       end
     end
